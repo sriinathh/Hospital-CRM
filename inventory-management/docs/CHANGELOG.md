@@ -1,0 +1,64 @@
+# Changelog — Inventory Management System
+
+## [Unreleased]
+
+### Security
+- **BUG-INV-MGMT-BE-013**: Removed insecure fallback values from `DATABASE_URL` and `REDIS_URL` — now use `required()` without fallback to prevent running with default credentials (`config/env.ts`)
+- **BUG-INV-MGMT-BE-014**: Health endpoint `/api/health` already protected by rate limiter middleware — confirmed no DoS vulnerability (`app.ts`)
+- **BUG-INV-MGMT-BE-015**: Missing RBAC in stock-movements routes — list and create had no role checks. Added `requireRole(ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF)` to both endpoints (`stock-movements.routes.ts`)
+- **BUG-INV-MGMT-BE-016**: Query parameter validation bypass in products controller — used `req.query as unknown as ProductPaginationInput` instead of validated schema. Fixed to use `productPaginationSchema.parse(req.query)` (`products.controller.ts`)
+- **BUG-INV-MGMT-BE-017**: Query parameter validation bypass in purchase-orders controller — used `req.query as unknown as PurchaseOrderPaginationInput` instead of validated schema. Fixed to use `purchaseOrderPaginationSchema.parse(req.query)` (`purchase-orders.controller.ts`)
+- **BUG-INV-MGMT-BE-018**: Query parameter validation bypass in stock-movements controller — used `req.query as unknown as MovementPaginationInput` instead of validated schema. Fixed to use `movementPaginationSchema.parse(req.query)` (`stock-movements.controller.ts`)
+- **BUG-INV-MGMT-BE-019**: Missing RBAC in dashboard routes — any authenticated user could access dashboard metrics. Added `requireRole(ROLES.ADMIN, ROLES.MANAGER)` to all dashboard routes (`dashboard.routes.ts`)
+- **BUG-INV-MGMT-BE-020**: Missing body validation on refresh route — `/refresh` endpoint lacked `validateBody` middleware. Added `validateBody(refreshSchema)` to ensure request body is validated (`auth.routes.ts`)
+- **BUG-INV-MGMT-BE-021**: Missing rate limiting on invite route — `/invite` endpoint lacked `authLimiter`, creating potential DoS vector. Added `authLimiter` to prevent abuse (`auth.routes.ts`)
+- **BUG-INV-MGMT-BE-022**: Missing RBAC on categories list route — any authenticated user could list all categories. Added `requireRole(ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF)` to `/categories` route (`categories.routes.ts`)
+- **BUG-INV-MGMT-BE-023**: Missing RBAC on products list route — any authenticated user could list all products. Added `requireRole(ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF)` to `/products` route (`products.routes.ts`)
+- **BUG-INV-MGMT-BE-024**: Missing RBAC on suppliers list route — any authenticated user could list all suppliers. Added `requireRole(ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF)` to `/suppliers` route (`suppliers.routes.ts`)
+- **BUG-INV-MGMT-BE-025**: Missing RBAC on warehouses list route — any authenticated user could list all warehouses. Added `requireRole(ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF)` to `/warehouses` route (`warehouses.routes.ts`)
+- **BUG-INV-MGMT-BE-026**: Missing RBAC on purchase-orders list route — any authenticated user could list all purchase orders. Added `requireRole(ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF)` to `/purchase-orders` route (`purchase-orders.routes.ts`)
+- **BUG-INV-MGMT-BE-027**: Missing RBAC on getById routes — any authenticated user could access individual resources. Added `requireRole(ROLES.ADMIN, ROLES.MANAGER, ROLES.STAFF)` to GET /:id and GET /:id/stock routes in categories, products, suppliers, warehouses, and purchase-orders modules (`categories.routes.ts`, `products.routes.ts`, `suppliers.routes.ts`, `warehouses.routes.ts`, `purchase-orders.routes.ts`)
+- **BUG-INV-MGMT-BE-028**: CORS origins used insecure fallback — `CORS_ORIGINS` had default localhost fallback, potentially allowing unintended origins in production. Changed to `required()` to force explicit configuration (`config/env.ts`)
+
+### Fixed
+- **BUG-INV-MGMT-BE-012:** Removed inconsistent "type": "module" from package.json to match CommonJS tsconfig configuration (`package.json`)
+- **BUG-INV-MGMT-BE-011:** Updated tsconfig.json module from CommonJS to Node16 and moduleResolution from node10 to node16 to fix deprecation warnings (`tsconfig.json`)
+- **BUG-INV-MGMT-BE-010:** Fixed .env path in env.ts from '../../.env' to '.env' for correct environment variable loading (`config/env.ts`)
+- **BUG-INV-MGMT-BE-001:** Auth controller — converted from spread operator array pattern (`...authController.register`) to standard exported handler functions; validation middleware moved to routes (`auth.controller.ts`, `auth.routes.ts`)
+- **BUG-INV-MGMT-BE-002:** `/logout` route now requires `authenticate` middleware (`auth.routes.ts`)
+- **BUG-INV-MGMT-BE-003:** `/logout` route now protected by `authLimiter` (`auth.routes.ts`)
+- **BUG-INV-MGMT-BE-004:** Export controller — converted from class-based array wrapper pattern to standard exported handler functions; routes updated to use direct handler imports (`export.controller.ts`, `export.routes.ts`)
+- **BUG-INV-MGMT-BE-005:** CSV injection protection — `escapeCsvField` function prefixes cells starting with `=+-@` with single quote (`export.service.ts`)
+- **BUG-INV-MGMT-BE-006:** `products.service.getById` — `NotFoundError` thrown in repository when product not found (`products.repository.ts`)
+- **BUG-INV-MGMT-BE-008:** `refreshExpiresIn` — added `refreshExpiresInMs` computed value in env config; `auth.service.ts` and `auth.controller.ts` use `env.jwt.refreshExpiresInMs` instead of fragile `parseInt` on string (`env.ts`, `auth.service.ts`, `auth.controller.ts`)
+- **BUG-INV-MGMT-BE-009:** Input validation — `validateBody(registerSchema)`, `validateBody(loginSchema)`, and `validateBody(inviteSchema)` now applied explicitly in auth routes (`auth.routes.ts`)
+
+## [1.0.0] — 2025-01-15
+
+### Added
+
+- **Auth**: JWT authentication with access + refresh tokens, register, login, role-based access control (ADMIN, MANAGER, STAFF)
+- **Products**: CRUD with SKU, barcode generation, category assignment, min stock levels, cost/sell pricing, image URLs
+- **Categories**: CRUD with nested tree structure, product filtering
+- **Warehouses**: CRUD with address, manager assignment, stock levels per warehouse
+- **Stock Movements**: In/out/transfer/adjustment with product, warehouse, type, quantity, comment, user tracking
+- **Suppliers**: CRUD with contact name, email, phone, address
+- **Purchase Orders**: Draft/sent/received/cancelled statuses, line items, auto stock movement on receive
+- **Dashboard**: Total inventory value, low-stock alerts, top products by value, movement chart, pending/received POs
+- **Export**: CSV export for products, stock levels, movements; PDF barcode labels
+- **Frontend**: React 18 + Vite 5 + TailwindCSS 3 with Framer Motion animations
+  - Page transitions (fade + slide)
+  - Product card hover animations
+  - Stock movement quantity animations
+  - Barcode reveal animation
+  - List staggered animations
+  - Button micro-interactions
+  - Skeleton shimmer loading
+  - Dashboard scroll reveal
+  - Number counters for metrics
+  - Low-stock alert pulse
+- **Docker**: Multi-stage Dockerfiles, docker-compose.yml with PostgreSQL, Redis, backend, frontend
+- **Launch scripts**: start.bat, start.sh, start-docker.bat, start-docker.sh
+- **Tests**: Unit tests for DTOs, integration tests for API endpoints
+- **Docs**: ARCHITECTURE.md, API.md, DATABASE.md, DEPLOYMENT.md
+- **Security**: Helmet, CORS, rate limiting, input validation (Zod), bcrypt password hashing

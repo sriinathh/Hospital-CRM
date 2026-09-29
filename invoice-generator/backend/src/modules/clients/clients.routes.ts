@@ -1,0 +1,22 @@
+import { Router } from 'express';
+import { authenticate } from '../../middleware/auth';
+import { requireRole } from '../../middleware/rbac';
+import { validateBody, validateQuery, validateParams } from '../../middleware/validate';
+import { z } from 'zod';
+import { listClients, getClient, getClientBalance, createClient, updateClient, deleteClient } from './clients.controller';
+import { createClientSchema, updateClientSchema, clientPaginationSchema } from './clients.dto';
+
+const idParamSchema = z.object({ id: z.string().uuid() });
+
+const router = Router();
+
+router.use(authenticate);
+
+router.get('/', requireRole('OWNER', 'ACCOUNTANT', 'VIEWER'), validateQuery(clientPaginationSchema), listClients);
+router.get('/:id', validateParams(idParamSchema), getClient);
+router.get('/:id/balance', validateParams(idParamSchema), getClientBalance);
+router.post('/', requireRole('OWNER', 'ACCOUNTANT'), validateBody(createClientSchema), createClient);
+router.patch('/:id', validateParams(idParamSchema), requireRole('OWNER', 'ACCOUNTANT'), validateBody(updateClientSchema), updateClient);
+router.delete('/:id', validateParams(idParamSchema), requireRole('OWNER'), deleteClient);
+
+export { router as clientsRoutes };
